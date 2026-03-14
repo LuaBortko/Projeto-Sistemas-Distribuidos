@@ -2,6 +2,7 @@ import zmq
 from time import sleep
 from datetime import datetime
 import zoneinfo
+import msgpack
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
@@ -13,44 +14,66 @@ usuariosLogados = list()
 canais = list()
 
 while True:
-    msg = socket.recv_string()
-    funcao, user, canal = msg.split()
-    tempo = datetime.now(tz=fuso).strftime("%H:%M")
+    data = socket.recv()
+    msg = msgpack.unpackb(data)
+    funcao = msg["func"]
+    user = msg["user"]
+    canal = msg["channel"]
+    tempo = msg["time"]
+
     if funcao == "login":
         if user in usuariosLogados:
-            socket.send_string("err2")
+            data = {"situ": "erro-login"}
+            packet = msgpack.packb(data)
+            socket.send(packet)
             print(
-                f"Erro ao entrar no servidor as {tempo}, nome ja existente", flush=True)
+                f"Erro ao entrar no servidor as {tempo}, usuario ja logado", flush=True)
         else:
             if user not in usuarios:
                 usuarios.append(user)
             usuariosLogados.append(user)
-            socket.send_string("success")
+            data = {"situ": "success"}
+            packet = msgpack.packb(data)
+            socket.send(packet)
             print(
                 f"O usuario {user} entrou no servidor com sucesso as {tempo}", flush=True)
+
     elif funcao == "entrar":
         if user not in usuariosLogados:
-            socket.send_string("err3")
+            data = {"situ": "erro-semLogin"}
+            packet = msgpack.packb(data)
+            socket.send(packet)
             print(
                 f"O usuario {user} não esta logado, tentativa de acesso as {tempo}", flush=True)
         else:
             if canal not in canais:
                 canais.append(canal)
-                socket.send_string("success")
+                data = {"situ": "success"}
+                packet = msgpack.packb(data)
+                socket.send(packet)
                 print(
                     f"Canal não encontrado, criado novo canal com o nome {canal} as {tempo}", flush=True)
             else:
-                socket.send_string("success")
+                data = {"situ": "success"}
+                packet = msgpack.packb(data)
+                socket.send(packet)
                 print(f"Entrou no canal {canal} com sucesso! as {tempo}")
+
     elif funcao == "listar":
         if user not in usuariosLogados:
-            socket.send_string("err3")
+            data = {"situ": "erro-semLogin"}
+            packet = msgpack.packb(data)
+            socket.send(packet)
             print(
                 f"O usuario {user} não esta logado, tentativa de acesso as {tempo}", flush=True)
         else:
-            socket.send_string("success")
+            data = {"situ": "success"}
+            packet = msgpack.packb(data)
+            socket.send(packet)
             print(canais)
 
     else:
-        socket.send_string("err1")
+        data = {"situ": "erro-comando"}
+        packet = msgpack.packb(data)
+        socket.send(packet)
         print(f"Comando não reconhecido as {tempo}", flush=True)
