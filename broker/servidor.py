@@ -12,6 +12,7 @@ fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
 usuarios = list()
 usuariosLogados = list()
 canais = list()
+# perguntar como fazer no arquivo, tipo como guardar o tempo e os usuarios
 
 while True:
     data = socket.recv()
