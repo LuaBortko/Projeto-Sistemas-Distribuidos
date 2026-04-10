@@ -31,6 +31,8 @@ context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
 fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
+pub = context.socket(zmq.PUB)
+pub.connect("tcp://pubsub:5557")
 
 usuarios = list()
 usuariosLogados = list()
@@ -47,6 +49,7 @@ while True:
     user = msg["user"]
     canal = msg["channel"]
     tempo = msg["time"]
+    mensagem = msg["msg"]
 
     if funcao == "login":
         if user in usuariosLogados:
@@ -100,6 +103,26 @@ while True:
             packet = msgpack.packb(data)
             socket.send(packet)
             print(canais)
+
+    elif funcao == "publicar":
+        if user not in usuariosLogados:
+            data = {"situ": "erro-semLogin"}
+        elif canal not in canais:
+            data = {"situ": "erro-canal"}
+
+        else:
+            pub_msg = {
+                "user": user,
+                "channel": canal,
+                "msg": mensagem,
+                "time": tempo
+            }
+            pub.send_multipart([
+                canal.encode(),
+                msgpack.packb(pub_msg)
+            ])
+            data = {"situ": "success"}
+        socket.send(msgpack.packb(data))
 
     else:
         data = {"situ": "erro-comando"}

@@ -37,10 +37,11 @@ func receber(socket *zmq4.Socket) {
 }
 
 func main() {
-
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 	socket.Connect("tcp://broker:5555")
+	sub, _ := zmq4.NewSocket(zmq4.SUB)
+	sub.Connect("tcp://pubsub-proxy:5558")
 	for {
 		mandar(socket, "login", "go1", "")
 		receber(socket)
@@ -59,4 +60,14 @@ func main() {
 		time.Sleep(2 * time.Second)
 
 	}
+	go func() {
+    	for {
+        	frames, _ := sub.RecvMessageBytes(0)
+    	    canal := string(frames[0])
+        	data := frames[1]
+        	var msg interface{}
+        	msgpack.Unmarshal(data, &msg)
+			fmt.Println("Mensagem recebida:", canal, msg)
+    	}
+	}()
 }
