@@ -1,0 +1,13 @@
+FROM golang:1.22
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y libzmq3-dev
+
+COPY . .
+
+RUN go mod init app || true
+RUN go get github.com/pebbe/zmq4
+RUN go get github.com/vmihailenco/msgpack/v5
+
+CMD ["bash"]

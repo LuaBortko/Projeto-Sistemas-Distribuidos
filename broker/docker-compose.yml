@@ -3,7 +3,7 @@ services:
   broker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-Python
     image: cc7261:pyzmq
     container_name: broker
     volumes:
@@ -12,26 +12,26 @@ services:
       - 5555:5555
       - 5556:5556
 
-  servidor:
+  servidor-python:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-Python
     image: cc7261:pyzmq
     volumes:
       - ./servidor.py:/app/main.py
     depends_on:
       - broker
     deploy:
-      replicas: 1
+      replicas: 2
 
-  cliente:
+  cliente-go:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: cc7261:pyzmq
-    volumes:
-      - ./cliente.py:/app/main.py
+      dockerfile: Dockerfile-go
+    command: go run cliente.go
     depends_on:
-      - servidor
+      - broker
     deploy:
-      replicas: 1
+      replicas: 2
+
+

@@ -3,6 +3,29 @@ from time import sleep
 from datetime import datetime
 import zoneinfo
 import msgpack
+import pickle
+import os
+
+ARQUIVO = "dados.pkl"
+
+
+def salvar_dados():
+    with open(ARQUIVO, "wb") as f:
+        pickle.dump({
+            "usuarios": usuarios,
+            "canais": canais
+        }, f)
+
+
+def carregar_dados():
+    global usuarios, usuariosLogados, canais
+
+    if os.path.exists(ARQUIVO):
+        with open(ARQUIVO, "rb") as f:
+            dados = pickle.load(f)
+            usuarios = dados.get("usuarios", [])
+            canais = dados.get("canais", [])
+
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
@@ -12,6 +35,10 @@ fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
 usuarios = list()
 usuariosLogados = list()
 canais = list()
+
+carregar_dados()
+print("Usuarios salvos: ", usuarios)
+print("Canais salvos: ", canais)
 
 while True:
     data = socket.recv()
@@ -31,6 +58,7 @@ while True:
         else:
             if user not in usuarios:
                 usuarios.append(user)
+                salvar_dados()
             usuariosLogados.append(user)
             data = {"situ": "success"}
             packet = msgpack.packb(data)
@@ -48,6 +76,7 @@ while True:
         else:
             if canal not in canais:
                 canais.append(canal)
+                salvar_dados()
                 data = {"situ": "success"}
                 packet = msgpack.packb(data)
                 socket.send(packet)

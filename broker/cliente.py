@@ -19,19 +19,19 @@ def mandar(func, user, channel):
 
 
 while True:
-    mandar("login", "usuario1", "")
+    mandar("login", "py1", "")
     recebido = msgpack.unpackb(socket.recv())  # Mensagem recebida do servidor
     print(f"Resposta do servidor: {recebido}", flush=True)
     sleep(2)
-    mandar("entrar", "usuario1", "teste1")
+    mandar("entrar", "py1", "CanalPython")
     recebido = msgpack.unpackb(socket.recv())  # Mensagem recebida do servidor
     print(f"Resposta do servidor: {recebido}", flush=True)
     sleep(2)
-    mandar("listar", "usuario2", "")
+    mandar("listar", "py2", "")
     recebido = msgpack.unpackb(socket.recv())  # Mensagem recebida do servidor
     print(f"Resposta do servidor: {recebido}", flush=True)
     sleep(2)
-    mandar("listar", "usuario1", "")
+    mandar("listar", "py1", "")
     recebido = msgpack.unpackb(socket.recv())  # Mensagem recebida do servidor
     print(f"Resposta do servidor: {recebido}", flush=True)
     sleep(4)
