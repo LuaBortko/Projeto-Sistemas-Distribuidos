@@ -13,9 +13,11 @@ type Message struct {
 	Func    string `msgpack:"func"`
 	Channel string `msgpack:"channel"`
 	Time    string `msgpack:"time"`
+	Msg     string `msgpack:"msg"`
+
 }
 
-func mandar(socket *zmq4.Socket, funcao string, user string, channel string) {
+func mandar(socket *zmq4.Socket, funcao string, user string, channel string, mensagem string) {
 	location, _ := time.LoadLocation("America/Sao_Paulo")
 	tempo := time.Now().In(location).Format("15:04")
 	msg := Message{
@@ -23,6 +25,7 @@ func mandar(socket *zmq4.Socket, funcao string, user string, channel string) {
 		Func:    funcao,
 		Channel: channel,
 		Time:    tempo,
+		Msg:     mensagem,
 	}
 	fmt.Printf("Mensagem do usuario em %s. Mensagem: %+v\n", tempo, msg)
 	packet, _ := msgpack.Marshal(msg)
@@ -43,19 +46,20 @@ func main() {
 	sub, _ := zmq4.NewSocket(zmq4.SUB)
 	sub.Connect("tcp://pubsub-proxy:5558")
 	for {
-		mandar(socket, "login", "go1", "")
+		mandar(socket, "login", "go1", "", "")
 		receber(socket)
 		time.Sleep(2 * time.Second)
 
-		mandar(socket, "entrar", "go1", "CanalGo")
+		mandar(socket, "entrar", "go1", "CanalGo", "")
 		receber(socket)
+		sub.SetSubscribe("CanalGo")
 		time.Sleep(2 * time.Second)
 
-		mandar(socket, "listar", "go2", "")
-		receber(socket)
-		time.Sleep(2 * time.Second)
+		//mandar(socket, "listar", "go2", "", "")
+		//receber(socket)
+		//time.Sleep(2 * time.Second)
 
-		mandar(socket, "listar", "go1", "")
+		mandar(socket, "listar", "go1", "", "")
 		receber(socket)
 		time.Sleep(2 * time.Second)
 

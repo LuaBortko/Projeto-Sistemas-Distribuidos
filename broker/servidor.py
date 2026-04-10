@@ -27,6 +27,19 @@ def carregar_dados():
             canais = dados.get("canais", [])
 
 
+def carregar_mensagens():
+    global mensagens
+
+    if os.path.exists(ARQUIVO_MSG):
+        with open(ARQUIVO_MSG, "rb") as f:
+            mensagens = pickle.load(f)
+
+
+def salvar_mensagens():
+    with open(ARQUIVO_MSG, "wb") as f:
+        pickle.dump(mensagens, f)
+
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
@@ -37,8 +50,10 @@ pub.connect("tcp://pubsub:5557")
 usuarios = list()
 usuariosLogados = list()
 canais = list()
-
+mensagens = []
 carregar_dados()
+carregar_mensagens()
+print("Mensagens salvas:", len(mensagens))
 print("Usuarios salvos: ", usuarios)
 print("Canais salvos: ", canais)
 
@@ -121,9 +136,12 @@ while True:
                 canal.encode(),
                 msgpack.packb(pub_msg)
             ])
+            mensagens.append(pub_msg)
+            salvar_mensagens()
+            print(f"[PUB] {user} -> {canal}: {mensagem} ({tempo})", flush=True)
             data = {"situ": "success"}
+            sleep(1)
         socket.send(msgpack.packb(data))
-
     else:
         data = {"situ": "erro-comando"}
         packet = msgpack.packb(data)
