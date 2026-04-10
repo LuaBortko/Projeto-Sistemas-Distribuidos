@@ -34,7 +34,7 @@ services:
     depends_on:
       - broker
     deploy:
-      replicas: 2
+      replicas: 1
 
   cliente-go:
     build:
@@ -44,6 +44,6 @@ services:
     depends_on:
       - broker
     deploy:
-      replicas: 2
+      replicas: 5
 
 

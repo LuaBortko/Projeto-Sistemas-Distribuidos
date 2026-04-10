@@ -7,6 +7,7 @@ import pickle
 import os
 
 ARQUIVO = "dados.pkl"
+ARQUIVO_MSG = "msgs.pkl"
 
 
 def salvar_dados():
@@ -114,10 +115,9 @@ while True:
             print(
                 f"O usuario {user} não esta logado, tentativa de acesso as {tempo}", flush=True)
         else:
-            data = {"situ": "success"}
-            packet = msgpack.packb(data)
-            socket.send(packet)
-            print(canais)
+            # print(canais)
+            data = {"situ": "success", "canais": canais}
+            socket.send(msgpack.packb(data))
 
     elif funcao == "publicar":
         if user not in usuariosLogados:
