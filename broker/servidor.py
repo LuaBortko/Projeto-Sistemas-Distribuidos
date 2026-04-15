@@ -7,6 +7,7 @@ import pickle
 import os
 
 ARQUIVO = "dados.pkl"
+ARQUIVO_MSG = "msgs.pkl"
 
 
 def salvar_dados():
@@ -27,16 +28,33 @@ def carregar_dados():
             canais = dados.get("canais", [])
 
 
+def carregar_mensagens():
+    global mensagens
+
+    if os.path.exists(ARQUIVO_MSG):
+        with open(ARQUIVO_MSG, "rb") as f:
+            mensagens = pickle.load(f)
+
+
+def salvar_mensagens():
+    with open(ARQUIVO_MSG, "wb") as f:
+        pickle.dump(mensagens, f)
+
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
 fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
+pub = context.socket(zmq.PUB)
+pub.connect("tcp://proxy:5557")
 
 usuarios = list()
 usuariosLogados = list()
 canais = list()
-
+mensagens = []
 carregar_dados()
+carregar_mensagens()
+print("Mensagens salvas:", len(mensagens))
 print("Usuarios salvos: ", usuarios)
 print("Canais salvos: ", canais)
 
@@ -47,6 +65,7 @@ while True:
     user = msg["user"]
     canal = msg["channel"]
     tempo = msg["time"]
+    mensagem = msg["msg"]
 
     if funcao == "login":
         if user in usuariosLogados:
@@ -96,11 +115,33 @@ while True:
             print(
                 f"O usuario {user} não esta logado, tentativa de acesso as {tempo}", flush=True)
         else:
-            data = {"situ": "success"}
-            packet = msgpack.packb(data)
-            socket.send(packet)
-            print(canais)
+            # print(canais)
+            data = {"situ": "success", "canais": canais}
+            socket.send(msgpack.packb(data))
 
+    elif funcao == "publicar":
+        if user not in usuariosLogados:
+            data = {"situ": "erro-semLogin"}
+        elif canal not in canais:
+            data = {"situ": "erro-canal"}
+
+        else:
+            pub_msg = {
+                "user": user,
+                "channel": canal,
+                "msg": mensagem,
+                "time": tempo
+            }
+            pub.send_multipart([
+                canal.encode(),
+                msgpack.packb(pub_msg)
+            ])
+            mensagens.append(pub_msg)
+            salvar_mensagens()
+            print(f"[PUB] {user} -> {canal}: {mensagem} ({tempo})", flush=True)
+            data = {"situ": "success"}
+            sleep(1)
+        socket.send(msgpack.packb(data))
     else:
         data = {"situ": "erro-comando"}
         packet = msgpack.packb(data)
