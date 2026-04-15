@@ -108,7 +108,7 @@ func main() {
 	defer socket.Close()
 	socket.Connect("tcp://broker:5555")
 	sub, _ := zmq4.NewSocket(zmq4.SUB)
-	sub.Connect("tcp://pubsub-proxy:5558")
+	sub.Connect("tcp://proxy:5558")
 	
 	rand.Seed(time.Now().UnixNano())
 	numero := rand.Intn(100)

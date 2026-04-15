@@ -46,7 +46,7 @@ socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
 fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
 pub = context.socket(zmq.PUB)
-pub.connect("tcp://pubsub:5557")
+pub.connect("tcp://proxy:5557")
 
 usuarios = list()
 usuariosLogados = list()

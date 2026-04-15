@@ -44,6 +44,6 @@ services:
     depends_on:
       - broker
     deploy:
-      replicas: 5
+      replicas: 2
 
 
