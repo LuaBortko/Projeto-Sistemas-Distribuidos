@@ -57,6 +57,8 @@ carregar_mensagens()
 print("Mensagens salvas:", len(mensagens))
 print("Usuarios salvos: ", usuarios)
 print("Canais salvos: ", canais)
+contador = 0
+
 
 while True:
     data = socket.recv()
@@ -66,10 +68,14 @@ while True:
     canal = msg["channel"]
     tempo = msg["time"]
     mensagem = msg["msg"]
+    cont = msg["contador"]
+    if cont > contador:
+        contador = cont+1
 
     if funcao == "login":
         if user in usuariosLogados:
-            data = {"situ": "erro-login"}
+            contador += 1
+            data = {"situ": "erro-login", "contador": contador}
             packet = msgpack.packb(data)
             socket.send(packet)
             print(
@@ -79,7 +85,8 @@ while True:
                 usuarios.append(user)
                 salvar_dados()
             usuariosLogados.append(user)
-            data = {"situ": "success"}
+            contador += 1
+            data = {"situ": "success", "contador": contador}
             packet = msgpack.packb(data)
             socket.send(packet)
             print(
@@ -87,7 +94,8 @@ while True:
 
     elif funcao == "entrar":
         if user not in usuariosLogados:
-            data = {"situ": "erro-semLogin"}
+            contador += 1
+            data = {"situ": "erro-semLogin", "contador": contador}
             packet = msgpack.packb(data)
             socket.send(packet)
             print(
@@ -96,41 +104,47 @@ while True:
             if canal not in canais:
                 canais.append(canal)
                 salvar_dados()
-                data = {"situ": "success"}
+                contador += 1
+                data = {"situ": "success", "contador": contador}
                 packet = msgpack.packb(data)
                 socket.send(packet)
                 print(
                     f"Canal não encontrado, criado novo canal com o nome {canal} as {tempo}", flush=True)
             else:
-                data = {"situ": "success"}
+                contador += 1
+                data = {"situ": "success", "contador": contador}
                 packet = msgpack.packb(data)
                 socket.send(packet)
                 print(f"Entrou no canal {canal} com sucesso! as {tempo}")
 
     elif funcao == "listar":
         if user not in usuariosLogados:
-            data = {"situ": "erro-semLogin"}
+            contador += 1
+            data = {"situ": "erro-semLogin", "contador": contador}
             packet = msgpack.packb(data)
             socket.send(packet)
             print(
                 f"O usuario {user} não esta logado, tentativa de acesso as {tempo}", flush=True)
         else:
             # print(canais)
-            data = {"situ": "success", "canais": canais}
+            contador += 1
+            data = {"situ": "success", "canais": canais, "contador": contador}
             socket.send(msgpack.packb(data))
 
     elif funcao == "publicar":
+        contador += 1
         if user not in usuariosLogados:
-            data = {"situ": "erro-semLogin"}
+            data = {"situ": "erro-semLogin", "contador": contador}
         elif canal not in canais:
-            data = {"situ": "erro-canal"}
+            data = {"situ": "erro-canal", "contador": contador}
 
         else:
             pub_msg = {
                 "user": user,
                 "channel": canal,
                 "msg": mensagem,
-                "time": tempo
+                "time": tempo,
+                "contador": contador
             }
             pub.send_multipart([
                 canal.encode(),
@@ -139,11 +153,12 @@ while True:
             mensagens.append(pub_msg)
             salvar_mensagens()
             print(f"[PUB] {user} -> {canal}: {mensagem} ({tempo})", flush=True)
-            data = {"situ": "success"}
+            data = {"situ": "success", "contador": contador}
             sleep(1)
         socket.send(msgpack.packb(data))
     else:
-        data = {"situ": "erro-comando"}
+        contador += 1
+        data = {"situ": "erro-comando", "contador": contador}
         packet = msgpack.packb(data)
         socket.send(packet)
         print(f"Comando não reconhecido as {tempo}", flush=True)
