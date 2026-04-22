@@ -24,6 +24,18 @@ services:
       - 5557:5557
       - 5558:5558
 
+  referencia:
+    build:
+      context: .
+      dockerfile: Dockerfile-Python
+    image: cc7261:pyzmq
+    volumes:
+      - ./referencia.py:/app/main.py
+    depends_on:
+      - broker
+    deploy:
+      replicas: 1
+
   servidor-python:
     build:
       context: .
