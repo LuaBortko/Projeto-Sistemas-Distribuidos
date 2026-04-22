@@ -152,7 +152,8 @@ while True:
             ])
             mensagens.append(pub_msg)
             salvar_mensagens()
-            print(f"[PUB] {user} -> {canal}: {mensagem} ({tempo})", flush=True)
+            print(
+                f"[PUB] {user} -> {canal}: {mensagem} ({tempo}) Relogio Logico: {contador}", flush=True)
             data = {"situ": "success", "contador": contador}
             sleep(1)
         socket.send(msgpack.packb(data))

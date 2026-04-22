@@ -15,7 +15,7 @@ type Message struct {
 	Channel string `msgpack:"channel"`
 	Time    string `msgpack:"time"`
 	Msg     string `msgpack:"msg"`
-	Contador string `msgpack:"contador"`
+	Contador int `msgpack:"contador"`
 
 }
 
@@ -23,11 +23,11 @@ type Listar struct {
 	Situ   string   `msgpack:"situ"`
 	Canais []string `msgpack:"canais"`
 	Msg     string `msgpack:"msg"`
-	Contador string `msgpack:"contador"`
+	Contador int `msgpack:"contador"`
 }
 
 func mandar(socket *zmq4.Socket, funcao string, user string, channel string, mensagem string, contador *int){
-	//contador =+ 1 
+	*contador += 1 
 	location, _ := time.LoadLocation("America/Sao_Paulo")
 	tempo := time.Now().In(location).Format("15:04")
 	msg := Message{
@@ -36,7 +36,7 @@ func mandar(socket *zmq4.Socket, funcao string, user string, channel string, men
 		Channel: channel,
 		Time:    tempo,
 		Msg:     mensagem,
-		//Contador: contador,
+		Contador: *contador,
 	}
 	fmt.Printf("Mensagem do usuario em %s. Mensagem: %+v\n", tempo, msg)
 	packet, _ := msgpack.Marshal(msg)
@@ -45,10 +45,14 @@ func mandar(socket *zmq4.Socket, funcao string, user string, channel string, men
 
 func receber(socket *zmq4.Socket, contador *int) {
 	bytes, _ := socket.RecvBytes(0)
-	var resposta interface{}
+	var resposta Message
 	msgpack.Unmarshal(bytes, &resposta)
-	//pegar o contador da mensagem e verificar, se for maior que o daqui eu substituo e somo 1, senão não faço nada
 	fmt.Printf("Resposta do servidor: %+v\n", resposta)
+	cont := resposta.Contador
+	if(*contador < cont){
+		*contador = cont
+		*contador += 1
+	}
 }
 
 func contains(slice []string, item string)bool{
@@ -110,7 +114,7 @@ func termoAleatorio( lista []string) string{
 }
 
 func main() {
-	contador = 0
+	contador := 0
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 	socket.Connect("tcp://broker:5555")
@@ -145,12 +149,12 @@ func main() {
 
 	//Login
 	time.Sleep(2 * time.Second)
-	mandar(socket, "login", user, "", "", contador)
-	receber(socket, contador)
+	mandar(socket, "login", user, "", "", &contador)
+	receber(socket, &contador)
 	time.Sleep(2 * time.Second)
 
-	canais = garantirCanais(socket, user, contador)
-	garantirInscricao(socket, user, canais, &inscritos, sub, contador) // garanto que pelo menos há 3 inscrições
+	canais = garantirCanais(socket, user, &contador)
+	garantirInscricao(socket, user, canais, &inscritos, sub, &contador) // garanto que pelo menos há 3 inscrições
 
 	//Roda simultaneo, para sempre receber as mensagens do publisher
 	go func() {
@@ -158,20 +162,21 @@ func main() {
         		frames, _ := sub.RecvMessageBytes(0)
     	    		canal := string(frames[0])
         		data := frames[1]
-        		var msg interface{}
+       			var msg Message
         		msgpack.Unmarshal(data, &msg)
 			fmt.Println("Usuario: ", user)
 			fmt.Println("Mensagem recebida: ", canal, msg)
-
-	//pegar o contador da mensagem e verificar, se for maior que o daqui eu substituo e somo 1, senão não faço nada
+			cont := msg.Contador
+			if(contador < cont){
+				contador = cont
+				contador += 1
+			}
     		}
 	}()
 
 
-	for {
-		
-		mandar(socket, "publicar", user, termoAleatorio(canais), termoAleatorio(msgs), contador)
-    		receber(socket, contador)
-		
+	for {		
+		mandar(socket, "publicar", user, termoAleatorio(canais), termoAleatorio(msgs), &contador)
+    		receber(socket, &contador)
 	}
 }
