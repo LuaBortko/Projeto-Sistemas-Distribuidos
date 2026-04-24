@@ -1,5 +1,5 @@
 import zmq
-from time import sleep
+import time
 from datetime import datetime
 import zoneinfo
 import msgpack
@@ -76,7 +76,7 @@ while True:
         achei = -1
         for servidor in servidores:
             if servidor["name"] == name:
-                servidor["last_seen"] = time.time()
+                servidor["last_time"] = time.time()
                 achei = 1
                 break
         if achei == -1:

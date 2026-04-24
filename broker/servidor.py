@@ -5,6 +5,7 @@ import zoneinfo
 import msgpack
 import pickle
 import os
+import socket as pysocket
 
 ARQUIVO = "dados.pkl"
 ARQUIVO_MSG = "msgs.pkl"
@@ -40,13 +41,16 @@ def salvar_mensagens():
     with open(ARQUIVO_MSG, "wb") as f:
         pickle.dump(mensagens, f)
 
-
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
 fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
 pub = context.socket(zmq.PUB)
 pub.connect("tcp://proxy:5557")
+
+#Adição da comunicação com a referencia
+req = context.socket(zmq.REQ)
+req.connect("tcp://broker2:5559")
 
 usuarios = list()
 usuariosLogados = list()
@@ -59,9 +63,41 @@ print("Usuarios salvos: ", usuarios)
 print("Canais salvos: ", canais)
 contador = 0
 
+#Conversa inicial com a referencia
+nome = pysocket.gethostname()
+msg = {
+    "func": "rank",
+    "name": nome
+}
 
+req.send(msgpack.packb(msg))
+resposta = msgpack.unpackb(req.recv())
+print("Resposta do rank recebida: ", resposta)
+
+msg2 = {
+    "func": "listar",
+    "name": nome
+}
+req.send(msgpack.packb(msg2))
+resposta = msgpack.unpackb(req.recv())
+print("Servidores ativos:", resposta["lista"])
+
+contador_heartbeat = 0;
 while True:
     data = socket.recv()
+    contador_heartbeat += 1
+
+    if contador_heartbeat >= 10:
+        heartbeat = {
+            "func": "heartbeat",
+            "name": nome
+        }
+        req.send(msgpack.packb(heartbeat))
+        resposta = msgpack.unpackb(req.recv())  # só um recv
+        print("[HEARTBEAT] enviado")
+        print("Resposta da Referencia:", resposta["status"])
+        contador_heartbeat = 0
+
     msg = msgpack.unpackb(data)
     funcao = msg["func"]
     user = msg["user"]

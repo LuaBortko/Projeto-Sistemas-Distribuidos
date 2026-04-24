@@ -148,7 +148,7 @@ func main() {
 	}
 
 	//Login
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	mandar(socket, "login", user, "", "", &contador)
 	receber(socket, &contador)
 	time.Sleep(2 * time.Second)
