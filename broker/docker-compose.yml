@@ -12,6 +12,18 @@ services:
       - 5555:5555
       - 5556:5556
 
+  broker2:
+    build:
+      context: .
+      dockerfile: Dockerfile-Python
+    image: cc7261:pyzmq
+    container_name: broker2
+    volumes:
+      - ./broker2.py:/app/main.py
+    ports:
+      - 5559:5559
+      - 5550:5550
+
   proxy:
     build:
       context: .
@@ -24,6 +36,18 @@ services:
       - 5557:5557
       - 5558:5558
 
+  referencia:
+    build:
+      context: .
+      dockerfile: Dockerfile-Python
+    image: cc7261:pyzmq
+    volumes:
+      - ./referencia.py:/app/main.py
+    depends_on:
+      - broker2
+    deploy:
+      replicas: 1
+
   servidor-python:
     build:
       context: .
@@ -33,8 +57,9 @@ services:
       - ./servidor.py:/app/main.py
     depends_on:
       - broker
+      - broker2
     deploy:
-      replicas: 1
+      replicas: 2
 
   cliente-go:
     build:
