@@ -1,7 +1,5 @@
 import zmq
 import time
-from datetime import datetime
-import zoneinfo
 import msgpack
 import pickle
 import os
@@ -10,11 +8,9 @@ ARQUIVO = "servidores.pkl"
 
 def carregar_servidores():
     global servidores
-
     if os.path.exists(ARQUIVO):
         with open(ARQUIVO, "rb") as f:
             servidores = pickle.load(f)
-
 
 def salvar_servidores():
     with open(ARQUIVO, "wb") as f:
@@ -22,34 +18,37 @@ def salvar_servidores():
 
 def limpar_servidores(tempo):
     agora = time.time()
-    mortos = []
-
-    for servidor in servidores:
-        if agora - servidor["last_time"] > tempo:
-            mortos.append(servidor)
-
+    mortos = [s for s in servidores if agora - s["last_time"] > tempo]
     for servidor in mortos:
-        print(f"Removendo servidor {servidor['name']}")
+        print(f"Removendo servidor {servidor['name']}", flush=True)
         servidores.remove(servidor)
+    if mortos:
+        salvar_servidores()  
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker2:5550")
-fuso = zoneinfo.ZoneInfo("America/Sao_Paulo")
-intervalo = 30
+intervalo = 30  # segundos sem heartbeat para remover servidor
 
 servidores = list()
-
 carregar_servidores()
 print("Servidores ativos salvos:", servidores)
 
+poller = zmq.Poller()
+poller.register(socket, zmq.POLLIN)
+
 while True:
     limpar_servidores(intervalo)
+    eventos = dict(poller.poll(5000))
+
+    if socket not in eventos:
+        continue
 
     data = socket.recv()
     msg = msgpack.unpackb(data)
     funcao = msg["func"]
     name = msg["name"]
+
     if funcao == "rank":
         rank = -1
         for servidor in servidores:
@@ -58,30 +57,26 @@ while True:
                 break
         if rank == -1:
             rank = len(servidores)
-            servidores.append({"name":name,"rank":rank,"last_time":time.time()})
+            servidores.append({"name": name, "rank": rank, "last_time": time.time()})
             salvar_servidores()
-            
-        data = {"rank": rank}
-        packet = msgpack.packb(data)
-        socket.send(packet)
+
+        socket.send(msgpack.packb({"rank": rank}))
         print(f"Solicitação de rank do servidor {name} e rank {rank}", flush=True)
 
     elif funcao == "listar":
-        data = {"lista": servidores}
-        packet = msgpack.packb(data)
-        socket.send(packet)
-        print(f"Solicitação da lista de servidores",flush=True)
-    
+        socket.send(msgpack.packb({"lista": servidores}))
+        print("Solicitação da lista de servidores", flush=True)
+
     elif funcao == "heartbeat":
-        achei = -1
+        achei = False
         for servidor in servidores:
             if servidor["name"] == name:
                 servidor["last_time"] = time.time()
-                achei = 1
+                achei = True
                 break
-        if achei == -1:
+        if not achei:
             socket.send(msgpack.packb({"status": "err"}))
-            print(f"Servidor não encontrado",flush=True)
-
+            print(f"Servidor não encontrado: {name}", flush=True)
         else:
             socket.send(msgpack.packb({"status": "ok"}))
+            print(f"Heartbeat de {name}", flush=True)
