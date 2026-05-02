@@ -23,12 +23,13 @@ def limpar_servidores(tempo):
         print(f"Removendo servidor {servidor['name']}", flush=True)
         servidores.remove(servidor)
     if mortos:
-        salvar_servidores()  
+        salvar_servidores()
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker2:5550")
-intervalo = 30  # segundos sem heartbeat para remover servidor
+
+intervalo = 120
 
 servidores = list()
 carregar_servidores()
@@ -39,8 +40,8 @@ poller.register(socket, zmq.POLLIN)
 
 while True:
     limpar_servidores(intervalo)
-    eventos = dict(poller.poll(5000))
 
+    eventos = dict(poller.poll(5000))
     if socket not in eventos:
         continue
 
@@ -54,12 +55,12 @@ while True:
         for servidor in servidores:
             if servidor["name"] == name:
                 rank = servidor["rank"]
+                servidor["last_time"] = time.time()
                 break
         if rank == -1:
             rank = len(servidores)
             servidores.append({"name": name, "rank": rank, "last_time": time.time()})
             salvar_servidores()
-
         socket.send(msgpack.packb({"rank": rank}))
         print(f"Solicitação de rank do servidor {name} e rank {rank}", flush=True)
 
