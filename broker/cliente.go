@@ -102,7 +102,7 @@ func garantirCanais(socket *zmq4.Socket, user string, contador *int) []string {
 
 		mandar(socket, "entrar", user, novo, "", contador)
 		receber(socket, contador)
-
+		time.Sleep(500 * time.Millisecond)
 		canais = listarCanais(socket, user, contador)
 	}
 
@@ -148,7 +148,7 @@ func main() {
 	}
 
 	//Login
-	time.Sleep(5 * time.Second)
+	time.Sleep(20 * time.Second)
 	mandar(socket, "login", user, "", "", &contador)
 	receber(socket, &contador)
 	time.Sleep(2 * time.Second)
@@ -177,6 +177,7 @@ func main() {
 
 	for {		
 		mandar(socket, "publicar", user, termoAleatorio(canais), termoAleatorio(msgs), &contador)
-    		receber(socket, &contador)
+    	receber(socket, &contador)
+		time.Sleep(10 * time.Second)
 	}
 }

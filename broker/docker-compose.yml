@@ -58,8 +58,10 @@ services:
     depends_on:
       - broker
       - broker2
+    ports:
+      - "6000"
     deploy:
-      replicas: 2
+      replicas: 3
 
   cliente-go:
     build:
@@ -69,6 +71,6 @@ services:
     depends_on:
       - broker
     deploy:
-      replicas: 2
+      replicas: 1
 
 
