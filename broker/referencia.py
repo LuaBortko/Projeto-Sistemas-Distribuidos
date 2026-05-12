@@ -28,6 +28,7 @@ def limpar_servidores(tempo):
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker2:5550")
+#socket.connect("tcp://broker:5556")
 
 intervalo = 120
 

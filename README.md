@@ -13,3 +13,9 @@ O formato escolhido para a troca de mensagens foi o **MessagePack**, por ser um 
 
 ## Persistência dos dados
 O formato escolhido foi com a biblioteca **pickle**, que é uma biblioteca nativa usada para serializar (converter em bytes) e desserializar (reconstruir) objetos Python, como dicionários, listas e modelos de IA. Ele salva dados complexos em um arquivo .pkl.
+
+## Replicação de dados
+O broker distribui as requisições dos clientes entre os servidores usando round-robin. Com isso, cada servidor armazena apenas uma parte das mensagens e dos canais criados. Se um servidor parar, parte do histórico se perde. Se um cliente pedir o histórico de mensagens, receberá apenas o que aquele servidor específico tem.
+
+### Método escolhido: Replicação Passiva (Primary-Backup)
+Com a replicação passiva, toda vez que qualquer servidor recebe uma mensagem (publicar) ou a criação de um canal (entrar), ele propaga esse dado para todos os outros servidores. Assim, todos mantêm o mesmo estado. Se um servidor cair, os demais continuam com o histórico completo. Se um cliente pedir o histórico e a requisição cair em qualquer servidor (por causa do round-robin), a resposta será sempre completa e consistente.

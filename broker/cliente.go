@@ -148,7 +148,7 @@ func main() {
 	}
 
 	//Login
-	time.Sleep(20 * time.Second)
+	time.Sleep(15 * time.Second)
 	mandar(socket, "login", user, "", "", &contador)
 	receber(socket, &contador)
 	time.Sleep(2 * time.Second)
@@ -176,7 +176,7 @@ func main() {
 
 
 	for {		
-		mandar(socket, "publicar", user, termoAleatorio(canais), termoAleatorio(msgs), &contador)
+		mandar(socket, "publicar", user, termoAleatorio(inscritos), termoAleatorio(msgs), &contador)
     	receber(socket, &contador)
 		time.Sleep(10 * time.Second)
 	}
