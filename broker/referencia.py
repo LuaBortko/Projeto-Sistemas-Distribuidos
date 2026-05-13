@@ -30,7 +30,7 @@ socket = context.socket(zmq.REP)
 socket.connect("tcp://broker2:5550")
 #socket.connect("tcp://broker:5556")
 
-intervalo = 120
+intervalo = 200
 
 servidores = list()
 carregar_servidores()

@@ -178,6 +178,6 @@ func main() {
 	for {		
 		mandar(socket, "publicar", user, termoAleatorio(inscritos), termoAleatorio(msgs), &contador)
     	receber(socket, &contador)
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
