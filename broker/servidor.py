@@ -102,6 +102,11 @@ poller.register(socket_clientes, zmq.POLLIN)
 poller.register(sub_servers, zmq.POLLIN)
 poller.register(berkeley_rep, zmq.POLLIN)
 
+# ── Conjunto de IDs de mensagens já replicadas (deduplicação) ─────────────────
+ids_mensagens = set()
+for m in mensagens:
+    ids_mensagens.add((m["user"], m["channel"], m["contador"]))
+
 
 def iniciar_eleicao():
     global eleicao, existe_maior, timeout_eleicao
@@ -170,6 +175,16 @@ def rodar_berkeley():
             req.close()
 
 
+def replicar_mensagem(pub_msg):
+    """Publica uma mensagem no canal 'servers' para replicação nos demais nós."""
+    pub.send_multipart([b"servers", msgpack.packb({
+        "tipo": "replicar",
+        "autor": nome,
+        "mensagem": pub_msg
+    })])
+    print(f"[REPLICACAO] Enviada para replicação: {pub_msg['user']} -> {pub_msg['channel']}")
+
+
 # ── loop principal ────────────────────────────────────────────────────────────
 while True:
 
@@ -234,9 +249,17 @@ while True:
                 contador += 1
                 socket_clientes.send(msgpack.packb({"situ": "erro-semLogin", "contador": contador}))
             else:
+
                 if canal not in canais:
                     canais.append(canal)
                     salvar_dados()
+                    pub.send_multipart([b"servers", msgpack.packb({
+                        "tipo": "replicar_canal",
+                        "autor": nome,
+                        "canal": canal
+                    })])
+                    print(f"[REPLICACAO] Canal enviado para replicação: {canal}")
+
                 contador += 1
                 socket_clientes.send(msgpack.packb({"situ": "success", "contador": contador}))
                 print(f"Entrou/criou canal {canal} as {tempo}")
@@ -260,10 +283,21 @@ while True:
                     "user": user, "channel": canal,
                     "msg": mensagem, "time": tempo, "contador": contador
                 }
+                # Publica para os clientes inscritos no canal
                 pub.send_multipart([canal.encode(), msgpack.packb(pub_msg)])
-                mensagens.append(pub_msg)
-                salvar_mensagens()
+
+                # Salva localmente
+                chave = (user, canal, contador)
+                if chave not in ids_mensagens:
+                    mensagens.append(pub_msg)
+                    ids_mensagens.add(chave)
+                    salvar_mensagens()
+
                 print(f"[PUB] {user} -> {canal}: {mensagem} ({tempo}) Relogio: {contador}", flush=True)
+
+                # ── REPLICAÇÃO: propaga para os demais servidores ──────────
+                replicar_mensagem(pub_msg)
+
                 data_resp = {"situ": "success", "contador": contador}
                 sleep(1)
             socket_clientes.send(msgpack.packb(data_resp))
@@ -284,8 +318,25 @@ while True:
         tipo  = msg["tipo"]
         autor = msg.get("autor", "")
 
-        if autor == nome and tipo in ("Eleicao", "ok"):
+        if autor == nome and tipo in ("Eleicao", "ok", "replicar","replicar_canal"):
+            # Ignora mensagens que nós mesmos enviamos
             pass
+
+        elif tipo == "replicar":
+            # ── REPLICAÇÃO: recebe mensagem de outro servidor ──────────────
+            pub_msg = msg["mensagem"]
+            chave = (pub_msg["user"], pub_msg["channel"], pub_msg["contador"])
+            if chave not in ids_mensagens:
+                mensagens.append(pub_msg)
+                ids_mensagens.add(chave)
+                salvar_mensagens()
+                # Garante que canais referenciados existam localmente
+                if pub_msg["channel"] not in canais:
+                    canais.append(pub_msg["channel"])
+                    salvar_dados()
+                print(f"[REPLICACAO] Recebida de {autor}: {pub_msg['user']} -> {pub_msg['channel']}: {pub_msg['msg']}")
+            else:
+                print(f"[REPLICACAO] Mensagem duplicada ignorada (contador={pub_msg['contador']})")
 
         elif tipo == "Eleicao":
             rank_eleicao = msg["rank"]
@@ -319,6 +370,13 @@ while True:
             if msg["name"] == coordenador:
                 ultimo_heartbeat_coord = datetime.now().timestamp()
 
+        elif tipo == "replicar_canal":
+            canal_novo = msg["canal"]
+            if canal_novo not in canais:
+                canais.append(canal_novo)
+                salvar_dados()
+                print(f"[REPLICACAO] Canal recebido de {autor}: {canal_novo}")
+
     # ── lógica periódica ─────────────────────────────────────────────────
     agora = datetime.now().timestamp()
 
@@ -351,3 +409,4 @@ while True:
             print(f"[FALHA] Coordenador {coordenador} não responde!")
             coordenador = ""
             iniciar_eleicao()
+
